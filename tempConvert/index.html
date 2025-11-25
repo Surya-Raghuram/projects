@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <title>Temp Converter</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+
+    
+    <body>
+    <h2>Temperature Converter</h2>
+
+    <input id="temp" type="number" placeholder="Enter value">
+    <select id="type">
+        <option value="C">C => F</option>
+        <option value="F">F => C</option>
+    </select>
+    <button onclick="convert()">Convert</button>
+    <p id="result"></p>
+
+
+    <script>
+        function convert() {
+            let v = document.getElementById("temp").value;
+            let t = document.getElementById("type").value;
+            fetch("/convert?value=" + v + "&type=" + t).then(r => r.text()).then(d => document.getElementById("result").innerText = d);
+        }
+    </script>
+
+    </body>
+</html>
