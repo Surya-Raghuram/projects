@@ -1,4 +1,12 @@
 # Create your own file extension
+<div align="center">
+
+![Static Badge](https://img.shields.io/badge/c%2B%2B-blue)
+![Static Badge](https://img.shields.io/badge/Binary_Files-8A2BE2)
+![Static Badge](https://img.shields.io/badge/Custom_Extension-gray)
+
+
+</div>
 
 Overview
 --------
