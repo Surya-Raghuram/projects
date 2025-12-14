@@ -3,32 +3,8 @@
 #include <cstring>
 #include <cstdint>
 
+#include "filey_data.h"
 using namespace std;
-
-// Custom file format with .filey extension
-struct fileHeader {
-    char signature[6];  // "FILEY0" signature
-    uint32_t data_size;
-};
-// Metadata for the graph
-struct graphHeader {
-    int32_t num_nodes;
-    int32_t num_edges;
-};
-
-// Data stored in the .filey file
-// structure to store the text
-struct graphNode {
-    int32_t id;
-    float x,y;
-    char label[250];
-};
-// Structure to store the edges that connects the texts
-struct graphEdge {
-    int32_t from_id;
-    int32_t to_id;
-};
-
 
 void readCustomFile() {
     cout << "\n---- Reading .filey file ----" << endl;
@@ -45,7 +21,7 @@ void readCustomFile() {
     file.read(reinterpret_cast<char*>(&rHeader), sizeof(rHeader));
     
     // Verify signature
-    if (std::memcmp(rHeader.signature, "FILEY1", 6) != 0) {
+    if (std::memcmp(rHeader.signature, FILEY_SIGNATURE, 6) != 0) {
         cerr << "Error: Invalid file signature! Is the file a .filey file?" << endl;
         return;
     }
