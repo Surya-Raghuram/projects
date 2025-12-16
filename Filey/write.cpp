@@ -15,15 +15,15 @@ void writeCustomFile() {
     
     // Make custom data to write into the file
     graphNode nodes[4] = {
-        {1, 0.0f, 0.0f, "start"},
-        {2, 1.0f, 1.0f, "top"},
-        {3, 1.0f, -1.0f, "bottom"},
-        {4, 1.0f, 0.0f, "middle"}
+        {0, 0.0f, 0.0f, "start"},
+        {1, 1.0f, 1.0f, "top"},
+        {2, 1.0f, -1.0f, "bottom"},
+        {3, 1.0f, 0.0f, "middle"}
     };
     graphEdge edges[3] = {
-        {1, 2},
-        {1, 3},
-        {1, 4}
+        {0, 1},
+        {0, 2},
+        {0, 3}
     };
 
     // Custom header
@@ -32,7 +32,7 @@ void writeCustomFile() {
     gHeader.num_edges = 3;
     // Write to file header
     fileHeader header;
-    std::memcpy(header.signature, FILEY_SIGNATURE, 6); // The signature is "FILEY0"
+    std::memcpy(header.signature, FILEY_SIGNATURE, 6); // Write signature from shared data
     header.data_size = sizeof(graphHeader) + sizeof(graphNode) * gHeader.num_nodes + sizeof(graphEdge) * gHeader.num_edges; // The size of the file is copied to the header
 
     file.write(reinterpret_cast<char*>(&header), sizeof(header)); // Write file header
