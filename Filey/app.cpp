@@ -87,7 +87,7 @@ int main(){
     int hoveredNodeIndex = -1;
 
     while(!WindowShouldClose()){
-        // Build an ID -> index map so edges can reference nodes by id (not index)
+        // Index map so edges can reference nodes by id (not index)
         std::unordered_map<int32_t, size_t> idToIndex;
         idToIndex.reserve(nodes.size());
         for (size_t i = 0; i < nodes.size(); ++i) {
@@ -99,7 +99,7 @@ int main(){
         const float OFFSET_Y = 300.0f;
         const float NODE_RADIUS = 50.0f;
 
-        // Handle keyboard input (Hidden controls: S = Save, C = Clear)
+        // Handle keyboard input (controls: S = Save, C = Clear)
         if (IsKeyPressed(KEY_S)) {
             saveGraphToFile(nodes, edges);
         }
@@ -152,7 +152,7 @@ int main(){
                     }
                     selectedNodeIndex = -1;
                 } else {
-                    selectedNodeIndex = -1; // Deselect if clicked same node twice
+                    selectedNodeIndex = -1; // Diselect if clicked same node twice
                 }
             } else {
                 // Clicked on empty space - create new node
