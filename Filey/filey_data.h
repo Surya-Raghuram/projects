@@ -5,7 +5,7 @@
 #include <cstdint>
 
 // File signature
-const char FILEY_SIGNATURE[6] = {'F', 'I', 'L', 'E', 'Y', '1'};
+const char FILEY_SIGNATURE[6] = {'F', 'I', 'L', 'E', 'Y', '2'};
 
 // Header for the file
 struct fileHeader {

@@ -4,68 +4,209 @@
 #include <iostream>
 #include <cstring>
 #include <unordered_map>
+#include <string>
+#include <algorithm>
+#include <cmath>
 
 #include "filey_data.h"
 
 using namespace std;
 
-int main(){
-
-    // Load the data from map.filey
-    ifstream file("map.filey", std::ios::binary);
-    if(!file){
-        cerr << "Could not open file, File doesn't exist";
-        return -1;
+// Save graph data to file (Default updated to test1.filey)
+void saveGraphToFile(const vector<graphNode>& nodes, const vector<graphEdge>& edges, const char* filename = "test1.filey") {
+    ofstream file(filename, ios::binary);
+    if (!file) {
+        cerr << "Error: Could not open file for writing!" << endl;
+        return;
     }
 
-    // Get file header from file
+    // Write file header
+    fileHeader header;
+    memcpy(header.signature, FILEY_SIGNATURE, 6);
+    graphHeader gHeader;
+    gHeader.num_nodes = nodes.size();
+    gHeader.num_edges = edges.size();
+    header.data_size = sizeof(graphHeader) + sizeof(graphNode) * gHeader.num_nodes + sizeof(graphEdge) * gHeader.num_edges;
+    
+    file.write(reinterpret_cast<const char*>(&header), sizeof(header));
+    file.write(reinterpret_cast<const char*>(&gHeader), sizeof(gHeader));
+    file.write(reinterpret_cast<const char*>(nodes.data()), sizeof(graphNode) * nodes.size());
+    file.write(reinterpret_cast<const char*>(edges.data()), sizeof(graphEdge) * edges.size());
+    
+    file.close();
+    cout << "Saved " << nodes.size() << " nodes and " << edges.size() << " edges to " << filename << endl;
+}
+
+// Load graph data from file (Default updated to test1.filey)
+bool loadGraphFromFile(vector<graphNode>& nodes, vector<graphEdge>& edges, const char* filename = "test1.filey") {
+    ifstream file(filename, ios::binary);
+    if (!file) {
+        cout << "No existing file found (" << filename << "), starting with empty graph." << endl;
+        return false;
+    }
+
     fileHeader fHeader;
     file.read(reinterpret_cast<char*>(&fHeader), sizeof(fHeader));
-    // Check signature of file Header
-    if(memcmp(fHeader.signature, FILEY_SIGNATURE, 6) != 0){
-        cerr << "File has invalid signature!";
-        return 1;
+    if (memcmp(fHeader.signature, FILEY_SIGNATURE, 6) != 0) {
+        cerr << "Error: Invalid file signature!" << endl;
+        return false;
     }
 
-    // Get graph header from file
     graphHeader gHeader;
     file.read(reinterpret_cast<char*>(&gHeader), sizeof(gHeader));
 
-    // Get file data into vectors
-    vector<graphNode> nodes(gHeader.num_nodes);
+    nodes.resize(gHeader.num_nodes);
     file.read(reinterpret_cast<char*>(nodes.data()), sizeof(graphNode) * gHeader.num_nodes);
 
-    vector<graphEdge> edges(gHeader.num_edges);
+    edges.resize(gHeader.num_edges);
     file.read(reinterpret_cast<char*>(edges.data()), sizeof(graphEdge) * gHeader.num_edges);
+    
     file.close();
+    cout << "Loaded " << nodes.size() << " nodes and " << edges.size() << " edges from " << filename << endl;
+    return true;
+}
 
-    // Visualize the file data
-    InitWindow(800, 600, "map.Filey");
+int main(){
+    vector<graphNode> nodes;
+    vector<graphEdge> edges;
+
+    // Try to load existing file, if it doesn't exist start with empty graph
+    loadGraphFromFile(nodes, edges);
+
+    // Interactive graph editor
+    InitWindow(800, 600, "Filey - Graph Viewer");
     SetTargetFPS(60);
 
-    // Build an ID -> index map so edges can reference nodes by id (not index)
-    std::unordered_map<int32_t, size_t> idToIndex;
-    idToIndex.reserve(nodes.size());
-    for (size_t i = 0; i < nodes.size(); ++i) {
-        idToIndex[nodes[i].id] = i;
+    int nextNodeId = 0;
+    // Find the max existing ID to ensure we don't duplicate IDs
+    for (const auto& node : nodes) {
+        if (node.id >= nextNodeId) nextNodeId = node.id + 1;
     }
 
+    int selectedNodeIndex = -1;  // For creating edges
+    int hoveredNodeIndex = -1;
+
     while(!WindowShouldClose()){
-        BeginDrawing();
-        ClearBackground(GRAY);
+        // Build an ID -> index map so edges can reference nodes by id (not index)
+        std::unordered_map<int32_t, size_t> idToIndex;
+        idToIndex.reserve(nodes.size());
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            idToIndex[nodes[i].id] = i;
+        }
 
         const float SCALE = 150.0f;
         const float OFFSET_X = 400.0f;
         const float OFFSET_Y = 300.0f;
+        const float NODE_RADIUS = 50.0f;
 
-        // 1) Draw circles first so they sit behind text
-        for(const auto& node: nodes){
-            float transparency = 0.5f;
-            Color transRed = Fade(RED, transparency);
-            DrawCircle(node.x * SCALE + OFFSET_X, OFFSET_Y - node.y * SCALE, 50, transRed);
+        // Handle keyboard input (Hidden controls: S = Save, C = Clear)
+        if (IsKeyPressed(KEY_S)) {
+            saveGraphToFile(nodes, edges);
+        }
+        if (IsKeyPressed(KEY_C)) {
+            nodes.clear();
+            edges.clear();
+            selectedNodeIndex = -1;
+            nextNodeId = 0;
         }
 
-        // 2) Draw edges using id->index mapping so all edges show up
+        // Handle mouse input
+        Vector2 mousePos = GetMousePosition();
+        
+        // Check hover over nodes
+        hoveredNodeIndex = -1;
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            float nx = nodes[i].x * SCALE + OFFSET_X;
+            float ny = OFFSET_Y - nodes[i].y * SCALE;
+            float dist = sqrt((mousePos.x - nx) * (mousePos.x - nx) + (mousePos.y - ny) * (mousePos.y - ny));
+            if (dist <= NODE_RADIUS) {
+                hoveredNodeIndex = i;
+                break;
+            }
+        }
+
+        // Left click: Add node or select for edge creation
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            if (hoveredNodeIndex >= 0) {
+                // Clicked on existing node - select for edge creation
+                if (selectedNodeIndex == -1) {
+                    selectedNodeIndex = hoveredNodeIndex;
+                } else if (selectedNodeIndex != hoveredNodeIndex) {
+                    // Create edge between selected and clicked node
+                    graphEdge newEdge;
+                    newEdge.from_id = nodes[selectedNodeIndex].id;
+                    newEdge.to_id = nodes[hoveredNodeIndex].id;
+                    
+                    // Check if edge already exists to prevent duplicates
+                    bool exists = false;
+                    for (const auto& e : edges) {
+                        if ((e.from_id == newEdge.from_id && e.to_id == newEdge.to_id) ||
+                            (e.from_id == newEdge.to_id && e.to_id == newEdge.from_id)) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!exists) {
+                        edges.push_back(newEdge);
+                    }
+                    selectedNodeIndex = -1;
+                } else {
+                    selectedNodeIndex = -1; // Deselect if clicked same node twice
+                }
+            } else {
+                // Clicked on empty space - create new node
+                graphNode newNode;
+                newNode.id = nextNodeId++;
+                newNode.x = (mousePos.x - OFFSET_X) / SCALE;
+                newNode.y = (OFFSET_Y - mousePos.y) / SCALE;
+                snprintf(newNode.label, sizeof(newNode.label), "node%d", newNode.id);
+                nodes.push_back(newNode);
+                selectedNodeIndex = -1;
+            }
+        }
+
+        // Right click: Delete node or edge
+        if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
+            if (hoveredNodeIndex >= 0) {
+                int32_t deletedId = nodes[hoveredNodeIndex].id;
+                nodes.erase(nodes.begin() + hoveredNodeIndex);
+                
+                // Remove all edges connected to this node
+                edges.erase(
+                    std::remove_if(edges.begin(), edges.end(),
+                        [deletedId](const graphEdge& e) {
+                            return e.from_id == deletedId || e.to_id == deletedId;
+                        }),
+                    edges.end()
+                );
+                
+                selectedNodeIndex = -1;
+            }
+        }
+
+        BeginDrawing();
+        ClearBackground(GRAY);
+
+        // 1) Draw circles first so they sit behind text
+        for(size_t i = 0; i < nodes.size(); ++i){
+            const auto& node = nodes[i];
+            float transparency = 0.5f;
+            Color nodeColor = Fade(RED, transparency);
+            
+            // Highlight hovered node
+            if ((int)i == hoveredNodeIndex) {
+                nodeColor = Fade(ORANGE, 0.7f);
+            }
+            // Highlight selected node for edge creation
+            if ((int)i == selectedNodeIndex) {
+                nodeColor = Fade(GREEN, 0.7f);
+            }
+            
+            DrawCircle(node.x * SCALE + OFFSET_X, OFFSET_Y - node.y * SCALE, NODE_RADIUS, nodeColor);
+        }
+
+        // 2) Draw edges using id->index mapping
         for(const auto& edge: edges){
             auto itFrom = idToIndex.find(edge.from_id);
             auto itTo   = idToIndex.find(edge.to_id);
@@ -82,27 +223,30 @@ int main(){
             DrawLineEx((Vector2){x1,y1}, (Vector2){x2,y2}, 2.0f, WHITE);
         }
 
-        // 3) Draw text last with a subtle shadow/box for contrast
+        // 3) Draw text last
         for(const auto& node: nodes){
-            int fontSize = 50;
+            int fontSize = 20;
             const char* text = node.label;
             int textW = MeasureText(text, fontSize);
             int textH = fontSize;
 
-            float tx = node.x * SCALE + OFFSET_X;
-            float ty = OFFSET_Y - node.y * SCALE;
+            float tx = node.x * SCALE + OFFSET_X - textW / 2;
+            float ty = OFFSET_Y - node.y * SCALE - textH / 2;
 
-            // Background box with transparency for contrast
-            Color bg = Fade(BLACK, 0.5f);
+            // Background box
+            Color bg = Fade(BLACK, 0.6f);
             DrawRectangle(tx - 4, ty - 4, textW + 8, textH + 8, bg);
 
-            // Soft shadow
-            DrawText(text, (int)(tx + 2), (int)(ty + 2), fontSize, BLACK);
-            // Foreground text
+            // Shadow and Foreground text
+            DrawText(text, (int)(tx + 1), (int)(ty + 1), fontSize, BLACK);
             DrawText(text, (int)tx, (int)ty, fontSize, WHITE);
         }
 
+        // Draw simple status at bottom left (minimal info)
+        DrawText(TextFormat("Nodes: %d  Edges: %d", nodes.size(), edges.size()), 10, 570, 20, LIGHTGRAY);
+
         EndDrawing();
     }
+    CloseWindow();
     return 0;
 }
