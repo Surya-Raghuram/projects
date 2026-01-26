@@ -85,6 +85,11 @@ int main(){
 
     int selectedNodeIndex = -1;  // For creating edges
     int hoveredNodeIndex = -1;
+    
+    // Dialog state
+    bool showSaveDialog = false;
+    char filenameInput[256] = "";
+    int letterCount = 0;
 
     while(!WindowShouldClose()){
         // Index map so edges can reference nodes by id (not index)
@@ -99,9 +104,48 @@ int main(){
         const float OFFSET_Y = 300.0f;
         const float NODE_RADIUS = 50.0f;
 
-        // Handle keyboard input (controls: S = Save, C = Clear)
+        // Handle mouse input
+        Vector2 mousePos = GetMousePosition();
+        
+        // If save dialog is shown, handle text input
+        if (showSaveDialog) {
+            int key = GetCharPressed();
+            while (key > 0) {
+                if ((key >= 32) && (key <= 125) && (letterCount < 250)) {
+                    filenameInput[letterCount] = (char)key;
+                    letterCount++;
+                }
+                key = GetCharPressed();
+            }
+            
+            if (IsKeyPressed(KEY_BACKSPACE)) {
+                letterCount--;
+                if (letterCount < 0) letterCount = 0;
+                filenameInput[letterCount] = '\0';
+            }
+            
+            if (IsKeyPressed(KEY_ENTER)) {
+                if (letterCount > 0) {
+                    char fullFilename[300];
+                    snprintf(fullFilename, sizeof(fullFilename), "%s.filey", filenameInput);
+                    saveGraphToFile(nodes, edges, fullFilename);
+                }
+                showSaveDialog = false;
+            }
+            
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                showSaveDialog = false;
+            }
+        } else {
+            // Normal mouse handling when dialog is not shown
+            
+        // Handle keyboard input (controls: S = Save, C = Clear) - only when dialog is not shown
         if (IsKeyPressed(KEY_S)) {
-            saveGraphToFile(nodes, edges);
+            showSaveDialog = true;
+            letterCount = 0;
+            memset(filenameInput, 0, sizeof(filenameInput));
+            // Clear any pending character input to prevent 's' from being captured
+            while (GetCharPressed() > 0);
         }
         if (IsKeyPressed(KEY_C)) {
             nodes.clear();
@@ -109,9 +153,6 @@ int main(){
             selectedNodeIndex = -1;
             nextNodeId = 0;
         }
-
-        // Handle mouse input
-        Vector2 mousePos = GetMousePosition();
         
         // Check hover over nodes
         hoveredNodeIndex = -1;
@@ -184,6 +225,7 @@ int main(){
                 selectedNodeIndex = -1;
             }
         }
+        } // End of normal input handling
 
         BeginDrawing();
         ClearBackground(GRAY);
@@ -244,6 +286,40 @@ int main(){
 
         // Draw simple status at bottom left (minimal info)
         DrawText(TextFormat("Nodes: %d  Edges: %d", nodes.size(), edges.size()), 10, 570, 20, LIGHTGRAY);
+
+        // Draw save dialog if active
+        if (showSaveDialog) {
+            // Minimal semi-transparent overlay
+            DrawRectangle(0, 0, 800, 600, Fade(BLACK, 0.7f));
+            
+            // Dialog box
+            int dialogW = 400;
+            int dialogH = 100;
+            int dialogX = (800 - dialogW) / 2;
+            int dialogY = (600 - dialogH) / 2;
+            
+            DrawRectangle(dialogX, dialogY, dialogW, dialogH, DARKGRAY);
+            DrawRectangleLines(dialogX, dialogY, dialogW, dialogH, WHITE);
+            
+            // Prompt text
+            DrawText("Enter filename:", dialogX + 10, dialogY + 10, 20, WHITE);
+            
+            // Input box
+            int inputX = dialogX + 10;
+            int inputY = dialogY + 40;
+            int inputW = dialogW - 20;
+            int inputH = 30;
+            
+            DrawRectangle(inputX, inputY, inputW, inputH, LIGHTGRAY);
+            DrawRectangleLines(inputX, inputY, inputW, inputH, WHITE);
+            
+            // Show input text
+            DrawText(filenameInput, inputX + 5, inputY + 5, 20, BLACK);
+            DrawText(".filey", inputX + 5 + MeasureText(filenameInput, 20), inputY + 5, 20, GRAY);
+            
+            // Hint text
+            DrawText("Press ENTER to save, ESC to cancel", dialogX + 10, dialogY + 80, 14, LIGHTGRAY);
+        }
 
         EndDrawing();
     }
