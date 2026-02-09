@@ -11,15 +11,15 @@ Files Included:
 2PTC.pdb
 1A3N.pdb
 //python and pymol scripts
-distance_successive.py
-ca_angles.py
-end_to_end.py
+successive_distance.py
+angles.py
+end_distance.py
 phi_angles.pml
 //outputs
-distance_output.txt
-ca_angles_output.txt
-end_to_end_output.txt
-phi_angles_output.txt
+successive_distance.txt
+angles.txt
+end_distance.txt
+phi_angles.txt
 
 
 Ensure that all PDB files and Python scripts are present

@@ -1,0 +1,5 @@
+1MBN.pdb End-to-end distance = 24.5817
+1UBQ.pdb End-to-end distance = 37.063484
+1CRN.pdb End-to-end distance = 11.80957
+2PTC.pdb End-to-end distance = 36.704643
+1A3N.pdb End-to-end distance = 36.442345

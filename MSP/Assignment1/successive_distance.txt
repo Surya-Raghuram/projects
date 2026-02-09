@@ -1,0 +1,4 @@
+First 10 distances: [3.813135  3.813135  3.8288383 3.813135  3.8405728 3.7749171 3.8327544
+ 3.7775652 3.785499  3.8444757]
+Mean distance: 3.8003323
+Std deviation: 0.039421227 ~0. This shows that the distances between successive C-alpha atoms are almost constant.
